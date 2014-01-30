@@ -6,9 +6,9 @@
 using namespace cv;
 using namespace std;
 
-const float avgThresh = 16*8;
-const float varTresh = 100;
-
+const int avgThresh = 20;
+int noThresh = 100;
+/*
 float findKernelAverage(Mat patch,int power)
 {
   float average = 0;
@@ -33,9 +33,10 @@ float findKernelVariance(Mat patch, float average)
   variance = findKernelAverage(patch,2)-average;  
   return variance;
 }
-
+*/
 int compareAvgVar(Mat patch_new,Mat patch_static)
 {
+  /*
   float avgDiff,varDiff;
   float avgPatch_new,avgPatch_static,varPatch_new,varPatch_static;
   
@@ -47,23 +48,23 @@ int compareAvgVar(Mat patch_new,Mat patch_static)
   varDiff = abs(varPatch_new-varPatch_static);
   //cout<<avgPatch_new<<" "<<avgPatch_static<<" "<<varPatch_new<<" "<<varPatch_static<<endl;
   //cout<<"Difference in avg:"<<avgDiff<<"\tvar:"<<varDiff<<endl<<endl;
-  
-  if(avgDiff<avgThresh)
-  {    
-    if(varDiff>varTresh)
-    {  
-      return 0;
-    }
-    else
-    {
-      return 1;
-    }
-  }
-  else
+  */
+  int count1 = 0;
+  for(int i=0;i<patch_new.rows;i++)
   {
-    //cout<<"Difference in avg:"<<avgDiff<<endl;
-    return 0;
+    for(int j=0;j<patch_new.cols;j++)
+    {
+	if(abs(patch_new.at<uchar>(j,i)-patch_static.at<uchar>(j,i))>=avgThresh)
+	{
+	  count1++;
+	}		
+    }
   }
+  
+  if(count1>=noThresh)
+    return 1;
+  else
+    return 0;  
 }
 
 
@@ -76,12 +77,7 @@ int main()
   img = imread("../images/bw.jpeg");  
   img_new = imread("../images/bw1.jpeg");
   cout<<"Displaying Loaded Images..."<<endl;
-  /*namedWindow("Image_Static",CV_WINDOW_AUTOSIZE);
-  namedWindow("Image_New",CV_WINDOW_AUTOSIZE);
-  imshow("Image_Static",img);
-  imshow("Image_New",img_new);
-  waitKey(1000);*/
-   
+  
   //Printing Image Stats
   cout<<"\nOriginal Images"<<endl;
   cout<<"Rows->"<<img.rows<<"\tCols->"<<img.cols<<endl;
@@ -90,11 +86,12 @@ int main()
   int kernel_size;
   cout<<"\nKernel Size ->\t";
   cin>>kernel_size;
-  if(kernel_size<1)
+  if((kernel_size<1) || (img.rows%kernel_size!=0) || (img.cols%kernel_size!=0))
   {
     cout<<"Illegal Kernel Size"<<endl;
     return -1;
   }
+  noThresh = kernel_size * (kernel_size);
   
   /*Padding Images
   cout<<"Padding Images on all sides..."<<endl;
@@ -120,6 +117,7 @@ int main()
   cout<<"Computing the resultant image..."<<endl;
   Mat roi_static,roi_new;
   Mat result = Mat(img.rows,img.cols,CV_8UC(1),Scalar::all(0));  
+  
   for(int i = 0;i<img.rows-kernel_size;i+=kernel_size)
   {
     for(int j= 0; j<img.cols-kernel_size; j+=kernel_size)
@@ -127,14 +125,10 @@ int main()
 	roi_static = img(Rect(j,i,kernel_size,kernel_size));
 	roi_new = img_new(Rect(j,i,kernel_size,kernel_size));
 	//cout<<"Pixel of Interest:\t("<<i<<","<<j<<")"<<endl;
-	if(compareAvgVar(roi_new,roi_static)==0)
-	{
-	  rectangle(result,Rect(j,i,kernel_size,kernel_size),Scalar(0,0,0),-1,8,0);
-	}
-	else
+	if(compareAvgVar(roi_new,roi_static)==1)
 	{
 	  rectangle(result,Rect(j,i,kernel_size,kernel_size),Scalar(255,255,255),-1,8,0);
-	}
+	}	
     }
   }
 
