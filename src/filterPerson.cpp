@@ -6,8 +6,8 @@
 using namespace cv;
 using namespace std;
 
-const float avgThresh = 10.0;
-const float varTresh = 7;
+const float avgThresh = 16*8;
+const float varTresh = 100;
 
 float findKernelAverage(Mat patch,int power)
 {
@@ -73,15 +73,15 @@ int main()
   //Load Images
   Mat img,img_new;
   cout<<"Loading Images..."<<endl;
-  img = imread("/home/rajath/Pictures/grad.jpeg");  
-  img_new = imread("/home/rajath/Pictures/grad1.jpeg");
+  img = imread("../images/bw.jpeg");  
+  img_new = imread("../images/bw1.jpeg");
   cout<<"Displaying Loaded Images..."<<endl;
-  namedWindow("Image_Static",CV_WINDOW_AUTOSIZE);
+  /*namedWindow("Image_Static",CV_WINDOW_AUTOSIZE);
   namedWindow("Image_New",CV_WINDOW_AUTOSIZE);
   imshow("Image_Static",img);
   imshow("Image_New",img_new);
-  waitKey(1000);
-  
+  waitKey(1000);*/
+   
   //Printing Image Stats
   cout<<"\nOriginal Images"<<endl;
   cout<<"Rows->"<<img.rows<<"\tCols->"<<img.cols<<endl;
@@ -90,13 +90,13 @@ int main()
   int kernel_size;
   cout<<"\nKernel Size ->\t";
   cin>>kernel_size;
-  if(kernel_size<1 || kernel_size>10 || kernel_size%2==0)
+  if(kernel_size<1)
   {
     cout<<"Illegal Kernel Size"<<endl;
     return -1;
   }
   
-  //Padding Images
+  /*Padding Images
   cout<<"Padding Images on all sides..."<<endl;
   Mat pad_img, pad_img_new;
   copyMakeBorder(img,pad_img,(int)(kernel_size/2),(int)(kernel_size/2),(int)(kernel_size/2),(int)(kernel_size/2),BORDER_CONSTANT,0);
@@ -104,10 +104,10 @@ int main()
   
   //Printing Padded Images Stats
   cout<<"\nPadded Images"<<endl;
-  cout<<"Rows->"<<pad_img.rows<<"\tCols->"<<pad_img.cols<<endl;
+  cout<<"Rows->"<<pad_img.rows<<"\tCols->"<<pad_img.cols<<endl;*/
   
   //Comparing Images
-  int top = 0;
+  /*int top = 0;
   int bottom = pad_img.rows - (kernel_size/2) - 2;
   int left = 0;
   int right = pad_img.cols - (kernel_size/2) - 2;
@@ -115,32 +115,32 @@ int main()
   cout<<"\nBoundaries:"<<endl;
   cout<<"Top->"<<top<<"\tBottom->"<<bottom<<endl;
   cout<<"Left->"<<left<<"\tRight->"<<right<<endl;
-  cout<<endl;
+  cout<<endl;*/
   
   cout<<"Computing the resultant image..."<<endl;
   Mat roi_static,roi_new;
   Mat result = Mat(img.rows,img.cols,CV_8UC(1),Scalar::all(0));  
-  for(int i = top;i<bottom;i+=1)
+  for(int i = 0;i<img.rows-kernel_size;i+=kernel_size)
   {
-    for(int j= left; j<right; j+=1)
+    for(int j= 0; j<img.cols-kernel_size; j+=kernel_size)
     {
-	roi_static = pad_img(Rect(j,i,kernel_size,kernel_size));
-	roi_new = pad_img_new(Rect(j,i,kernel_size,kernel_size));
+	roi_static = img(Rect(j,i,kernel_size,kernel_size));
+	roi_new = img_new(Rect(j,i,kernel_size,kernel_size));
 	//cout<<"Pixel of Interest:\t("<<i<<","<<j<<")"<<endl;
 	if(compareAvgVar(roi_new,roi_static)==0)
 	{
-	  result.at<uchar>(i,j) = 0;
+	  rectangle(result,Rect(j,i,kernel_size,kernel_size),Scalar(0,0,0),-1,8,0);
 	}
 	else
 	{
-	  result.at<uchar>(i,j) = 255;
+	  rectangle(result,Rect(j,i,kernel_size,kernel_size),Scalar(255,255,255),-1,8,0);
 	}
     }
   }
 
   //Saving RESULT image
   cout<<"Writing the RESULT image to drive..."<<endl;
-  imwrite("./result.jpeg",result);
+  imwrite("../images/result.jpeg",result);
   
   //Display RESULT image
   namedWindow("Result",CV_WINDOW_AUTOSIZE);
