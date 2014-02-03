@@ -53,7 +53,11 @@ int main()
     cout<<"Illegal Kernel Size"<<endl;
     return -1;
   }
-  noThresh = kernel_size * (kernel_size);    
+  noThresh = (kernel_size) * (kernel_size);    
+  
+  //Saving points where the new image is changed from oldImage
+  //Use points to draw a single rectange around adjacent rectangles
+  vector<Point2i> rectPoints;
   
   //Background Subtraction in the form of Kernel
   cout<<"Computing the resultant image..."<<endl;
@@ -69,6 +73,7 @@ int main()
 	if(compareAvgVar(roi_new,roi_static)==1)
 	{
 	  rectangle(result,Rect(j,i,kernel_size,kernel_size),Scalar(255,255,255),-1,8,0);
+	  rectPoints.push_back(Point2i(j,i));
 	}	
     }
   }
