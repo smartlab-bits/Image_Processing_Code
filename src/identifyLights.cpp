@@ -44,9 +44,7 @@ int main()
   Mat image_color;
   camera.grab();
   camera.retrieve(image_color,CV_CAP_OPENNI_BGR_IMAGE);
-  namedWindow("work please!!!",CV_WINDOW_AUTOSIZE);
-  imshow("work please!!!",image_color);
-  waitKey(0);
+  
   Mat image_bw;
   cvtColor(image_color,image_bw,CV_BGR2GRAY);
     
