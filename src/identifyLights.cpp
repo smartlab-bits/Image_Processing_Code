@@ -1,6 +1,7 @@
 #include</usr/local/include/opencv2/core/core.hpp>
 #include</usr/local/include/opencv2/highgui/highgui.hpp>
 #include</usr/local/include/opencv2/imgproc/imgproc.hpp>
+#include</usr/local/include/opencv2/video/video.hpp>
 #include<iostream>
 
 using namespace std;
@@ -12,7 +13,8 @@ void initializeCamera(VideoCapture camera, int initTime)
   
   for( int i=0; i<initTime ;i++ )
   {
-    camera >> waste;
+    camera.grab();
+    camera.retrieve(waste,CV_CAP_OPENNI_BGR_IMAGE);
   }
 }
 
@@ -37,10 +39,11 @@ int main()
 {
   int const threshold_value = 220;	//value of threshold_value obatined by experimentation
   int const max_binary_value = 255;
-  VideoCapture camera(0);  
+  VideoCapture camera(CV_CAP_OPENNI);  
   initializeCamera(camera,25);
   Mat image_color;
-  camera >> image_color;
+  camera.grab();
+  camera.retrieve(image_color,CV_CAP_OPENNI_BGR_IMAGE);
   
   Mat image_bw;
   cvtColor(image_color,image_bw,CV_BGR2GRAY);
