@@ -1,11 +1,14 @@
-#include</usr/local/include/opencv2/core/core.hpp>
-#include</usr/local/include/opencv2/highgui/highgui.hpp>
-#include</usr/local/include/opencv2/imgproc/imgproc.hpp>
-#include</usr/local/include/opencv2/video/video.hpp>
+#include "identifyLights.hpp"
 #include<iostream>
-
+#include<vector>
 using namespace std;
 using namespace cv;
+
+struct storeRectangle{
+    Point pt;
+    int l;
+    int b;
+};
 
 void initializeCamera(VideoCapture camera, int initTime)
 {
@@ -16,6 +19,31 @@ void initializeCamera(VideoCapture camera, int initTime)
     camera.grab();
     camera.retrieve(waste,CV_CAP_OPENNI_BGR_IMAGE);
   }
+}
+
+void findLenBrd(int* x, int* y, int a, int b, Mat reduced_with_border)
+{
+    int l, br;
+    uchar* rowp = reduced_with_border.ptr<uchar>(a);
+    for(int j=b;j<reduced_with_border.cols;j++)
+    {
+        if(rowp[j]==0)
+        {
+            l = j-b;
+            break;
+        }
+    }
+    x = &l;
+    
+    for(int i=a;i<reduced_with_border.rows;i++)
+    {
+        if(reduced_with_border.at<uchar>(i,b)==0)
+        {
+            br = i-a;
+            break;
+        }
+    }
+    y = &br;
 }
 
 long countWhites(Mat image)
@@ -35,7 +63,93 @@ long countWhites(Mat image)
   return count;
 }
 
-int main()
+void enchanceImage(Mat reduced)
+{
+    int rows = reduced.rows;
+    int cols = reduced.cols;
+        
+    for(int i = 0;i<rows;i++)
+    {
+        for(int j = 0;j<cols;j++)
+        {
+            if(reduced.at<uchar>(i,j)==0)
+            {
+                if(((i-1)>=0) && reduced.at<uchar>(i-1,j)==255)
+                {
+                    if(((j+1)<=cols) && reduced.at<uchar>(i,j+1)==255)
+                    {
+                        reduced.at<uchar>(i,j)=255;    
+                        i = 0;
+                        j = 0;
+                    }
+                    else if(((j-1)>=0) && reduced.at<uchar>(i,j-1)==255)
+                    {
+                        reduced.at<uchar>(i,j) = 255;
+                        i = 0;
+                        j = 0;
+                    }
+                }
+                else if(((i+1)<=rows) && reduced.at<uchar>(i+1,j)==255)
+                {
+                    if(((j+1)<=cols) && reduced.at<uchar>(i,j+1)==255)
+                    {
+                        reduced.at<uchar>(i,j)=255;    
+                        i = 0;
+                        j = 0;
+                    }
+                    else if(((j-1)>=0) && reduced.at<uchar>(i,j-1)==255)
+                    {
+                        reduced.at<uchar>(i,j) = 255;
+                        i = 0;
+                        j = 0;
+                     }
+                }
+            }
+        }
+    }        
+}
+
+//Follow border to obtain co-ordinates of rectangular patches
+void followBorder(Mat reduced, Light* ptrL)
+{          
+  Mat reduced_with_border;
+  copyMakeBorder(reduced,reduced_with_border,1,1,1,1,BORDER_CONSTANT,0);  
+  vector<storeRectangle> corners;  
+  for(int i=1;i<reduced_with_border.rows;i++)
+  {      
+      for(int j=1;j<reduced_with_border.cols;j++)
+      {
+          if(reduced_with_border.at<uchar>(i,j)==255)
+          {
+              if(reduced_with_border.at<uchar>(i-1,j)==0 && reduced_with_border.at<uchar>(i,j-1)==0)
+              {
+                  storeRectangle cor;
+                  cor.pt = Point(i,j);
+                  int* length;
+                  int* breadth;
+                  findLenBrd(length,breadth,i,j, reduced_with_border);
+                  cor.l = *length;
+                  cor.b = *breadth;
+                  corners.push_back(cor);
+              }
+          }
+      }
+  }
+  
+  ptrL = (Light*)calloc(sizeof(Light),corners.size());
+  for(int k=0;k<corners.size();k++)
+  {
+      Light lt;
+      lt.code = k;
+      storeRectangle cor;
+      lt.x = cor.pt.x + (cor.l/2);
+      lt.y = cor.pt.y + (cor.b/2);      
+      ptrL[k] = lt;
+  }
+}
+   
+
+void getLightCoordinates(Light* ptr)
 {
   int const threshold_value = 220;	//value of threshold_value obatined by experimentation
   int const max_binary_value = 255;
@@ -47,7 +161,7 @@ int main()
   
   Mat image_bw;
   cvtColor(image_color,image_bw,CV_BGR2GRAY);
-    
+  
   Mat image_threshold;
   threshold(image_bw,image_threshold,threshold_value,max_binary_value,THRESH_BINARY); // last parameter to indicate BINARY THRESHOLD operation
   
@@ -58,22 +172,20 @@ int main()
   
   Mat ROI;
   Mat image_new = Mat(img.rows,img.cols,CV_8UC(1),Scalar::all(0));
-  
-  
+  Mat image_reduced = Mat(img.rows/kernel_size,img.cols/kernel_size,CV_8UC(1),Scalar::all(0));
+    
   for(int i=0;i<img.rows-kernel_size;i+=kernel_size)
   {
     for(int j=0;j<img.cols-kernel_size;j+=kernel_size)
     {
 	ROI = Mat(img,Rect(j,i,kernel_size,kernel_size));	
-	if(countWhites(ROI)>=(8*16))
+	if(countWhites(ROI)>=(16*14))
 	{
-	  rectangle(image_color,Rect(j,i,kernel_size,kernel_size),Scalar(255,0,0),2,8,0);
+	  image_reduced.at<uchar>(i/kernel_size,j/kernel_size) = 255;   
+          rectangle(image_color,Rect(j,i,kernel_size,kernel_size),Scalar(255,0,0),2,8,0);
 	}
     }
   }
-  namedWindow("work please!!!",CV_WINDOW_AUTOSIZE);
-  imshow("work please!!!",image_color);  
-  waitKey(0);
-  //imwrite("./image_new.jpeg",image_new);
-  return 0;
+  enchanceImage(image_reduced);  
+  followBorder(image_reduced,ptr);        
 }
