@@ -110,7 +110,7 @@ void enchanceImage(Mat reduced)
 }
 
 //Follow border to obtain co-ordinates of rectangular patches
-void followBorder(Mat reduced, Light* ptrL)
+int followBorder(Mat reduced, Light* ptrL)
 {          
   Mat reduced_with_border;
   copyMakeBorder(reduced,reduced_with_border,1,1,1,1,BORDER_CONSTANT,0);  
@@ -146,10 +146,11 @@ void followBorder(Mat reduced, Light* ptrL)
       lt.y = cor.pt.y + (cor.b/2);      
       ptrL[k] = lt;
   }
+  return corners.size();
 }
    
 
-void getLightCoordinates(Light* ptr)
+int getLightCoordinates(Light* ptr)
 {
   int const threshold_value = 220;	//value of threshold_value obatined by experimentation
   int const max_binary_value = 255;
@@ -187,5 +188,6 @@ void getLightCoordinates(Light* ptr)
     }
   }
   enchanceImage(image_reduced);  
-  followBorder(image_reduced,ptr);        
+  int noLights = followBorder(image_reduced,ptr);        
+  return noLights;
 }
