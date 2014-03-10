@@ -9,7 +9,9 @@ using namespace cv;
 
 typedef struct{
     int code;
-    float x,y,z;
+    int x,y;
+    float real_x,real_y,real_z;
+    
 }Light;
 
 void getLightCoordinates(Light* ptr);

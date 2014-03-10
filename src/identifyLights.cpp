@@ -141,7 +141,7 @@ int followBorder(Mat reduced, Light* ptrL)
   {
       Light lt;
       lt.code = k;
-      storeRectangle cor;
+      storeRectangle cor = corners.at(k);
       lt.x = cor.pt.x + (cor.l/2);
       lt.y = cor.pt.y + (cor.b/2);      
       ptrL[k] = lt;
