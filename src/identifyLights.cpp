@@ -182,8 +182,7 @@ int getLightCoordinates(Light* ptr)
 	ROI = Mat(img,Rect(j,i,kernel_size,kernel_size));	
 	if(countWhites(ROI)>=(16*14))
 	{
-	  image_reduced.at<uchar>(i/kernel_size,j/kernel_size) = 255;   
-          rectangle(image_color,Rect(j,i,kernel_size,kernel_size),Scalar(255,0,0),2,8,0);
+	  image_reduced.at<uchar>(i/kernel_size,j/kernel_size) = 255;             
 	}
     }
   }
