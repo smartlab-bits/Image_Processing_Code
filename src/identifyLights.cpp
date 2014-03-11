@@ -1,8 +1,7 @@
 #include "identifyLights.hpp"
 #include<iostream>
 #include<vector>
-
-#define kernel_size 16
+#include<stdio.h>
 using namespace std;
 using namespace cv;
 
@@ -35,7 +34,7 @@ void findLenBrd(int* x, int* y, int a, int b, Mat reduced_with_border)
             break;
         }
     }
-    x = &l;
+    *x = l;
     
     for(int i=a;i<reduced_with_border.rows;i++)
     {
@@ -45,7 +44,7 @@ void findLenBrd(int* x, int* y, int a, int b, Mat reduced_with_border)
             break;
         }
     }
-    y = &br;
+    *y = br;
 }
 
 long countWhites(Mat image)
@@ -59,7 +58,7 @@ long countWhites(Mat image)
     for(int j=0;j<image.cols;j++)
     {
       if(pix_row[j]==255)
-	count+=1;      
+        count+=1;      
     }
   }  
   return count;
@@ -112,7 +111,7 @@ void enchanceImage(Mat reduced)
 }
 
 //Follow border to obtain co-ordinates of rectangular patches
-int followBorder(Mat reduced, Light* ptrL, int min)
+int followBorder(Mat reduced, Light*** ptrL)
 {          
   Mat reduced_with_border;
   copyMakeBorder(reduced,reduced_with_border,1,1,1,1,BORDER_CONSTANT,0);  
@@ -127,41 +126,34 @@ int followBorder(Mat reduced, Light* ptrL, int min)
               {
                   storeRectangle cor;
                   cor.pt = Point(i,j);
-                  int* length;
-                  int* breadth;
-                  findLenBrd(length,breadth,i,j, reduced_with_border);
-                  cor.l = *length;
-                  cor.b = *breadth;
-                  
-                  if((cor.l*cor.b) >= min)
-                    corners.push_back(cor);
+                  int length=0;
+                  int breadth=0;
+                  findLenBrd(&length,&breadth,i,j, reduced_with_border);
+                  cor.l = length;
+                  cor.b = breadth;
+                  corners.push_back(cor);
               }
           }
       }
   }
-  
-  ptrL = (Light*)calloc(sizeof(Light),corners.size());
+  const int kernel_size = 16;  
+  **ptrL = (Light*)calloc(sizeof(Light),corners.size());
   for(int k=0;k<corners.size();k++)
   {
       Light lt;
       lt.code = k;
       storeRectangle cor = corners.at(k);
       lt.x = ((cor.pt.x + (cor.l/2))*kernel_size)+(kernel_size/2);
-      lt.y = ((cor.pt.y + (cor.b/2))*kernel_size)+(kernel_size/2);
-      ptrL[k] = lt;
+      lt.y = ((cor.pt.y + (cor.b/2))*kernel_size)+(kernel_size/2);      
+      (**ptrL)[k] = lt;       
   }
+
   return corners.size();
 }
-
-
-/*Function returns number of lights in a given image
- *Also, supplies a pointer to array containing a structure of lights which contain the co-ordiantes of the lights in the image   
- *ptr : pointer to light strucutre where information must be rendered 
- *min_pixels : threshold for minimun number of pixels that can be considered as a light. 
- */
-int getLightCoordinates(Light* ptr, int min_pixels)
+   
+int getLightCoordinates(Light** ptr)
 {
-  int const threshold_value = 220;	//value of threshold_value obatined by experimentation
+  int const threshold_value = 220;      //value of threshold_value obatined by experimentation
   int const max_binary_value = 255;
   VideoCapture camera(CV_CAP_OPENNI);  
   initializeCamera(camera,25);
@@ -171,29 +163,36 @@ int getLightCoordinates(Light* ptr, int min_pixels)
   
   Mat image_bw;
   cvtColor(image_color,image_bw,CV_BGR2GRAY);
-  
+    
   Mat image_threshold;
   threshold(image_bw,image_threshold,threshold_value,max_binary_value,THRESH_BINARY); // last parameter to indicate BINARY THRESHOLD operation
   
   Mat img;
-  img = image_threshold.clone();    
+  img = image_threshold.clone();
+  
+  const int kernel_size = 16;
   
   Mat ROI;
   Mat image_new = Mat(img.rows,img.cols,CV_8UC(1),Scalar::all(0));
   Mat image_reduced = Mat(img.rows/kernel_size,img.cols/kernel_size,CV_8UC(1),Scalar::all(0));
-    
+  
+  
   for(int i=0;i<img.rows-kernel_size;i+=kernel_size)
   {
     for(int j=0;j<img.cols-kernel_size;j+=kernel_size)
     {
-	ROI = Mat(img,Rect(j,i,kernel_size,kernel_size));	
-	if(countWhites(ROI)>=(16*14))
-	{
-	  image_reduced.at<uchar>(i/kernel_size,j/kernel_size) = 255;             
-	}
+        ROI = Mat(img,Rect(j,i,kernel_size,kernel_size));       
+        if(countWhites(ROI)>=(8*16))
+        {
+          image_reduced.at<uchar>(i/kernel_size,j/kernel_size) = 255;
+          rectangle(image_color,Rect(j,i,kernel_size,kernel_size),Scalar(255,0,0),2,8,0);
+        }
     }
   }
-  enchanceImage(image_reduced);  
-  int noLights = followBorder(image_reduced,ptr,min_pixels/kernel_size);        
+  enchanceImage(image_reduced);
+  namedWindow("Image_With_Light_Blocks_Identified",CV_WINDOW_NORMAL);
+  imshow("Image_With_Light_Blocks_Identified",image_color);  
+  waitKey(1);
+  int noLights = followBorder(image_reduced,&ptr);    
   return noLights;
 }
