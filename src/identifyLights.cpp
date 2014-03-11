@@ -1,6 +1,8 @@
 #include "identifyLights.hpp"
 #include<iostream>
 #include<vector>
+
+#define kernel_size 16
 using namespace std;
 using namespace cv;
 
@@ -110,7 +112,7 @@ void enchanceImage(Mat reduced)
 }
 
 //Follow border to obtain co-ordinates of rectangular patches
-int followBorder(Mat reduced, Light* ptrL)
+int followBorder(Mat reduced, Light* ptrL, int min)
 {          
   Mat reduced_with_border;
   copyMakeBorder(reduced,reduced_with_border,1,1,1,1,BORDER_CONSTANT,0);  
@@ -130,7 +132,9 @@ int followBorder(Mat reduced, Light* ptrL)
                   findLenBrd(length,breadth,i,j, reduced_with_border);
                   cor.l = *length;
                   cor.b = *breadth;
-                  corners.push_back(cor);
+                  
+                  if((cor.l*cor.b) >= min)
+                    corners.push_back(cor);
               }
           }
       }
@@ -142,15 +146,20 @@ int followBorder(Mat reduced, Light* ptrL)
       Light lt;
       lt.code = k;
       storeRectangle cor = corners.at(k);
-      lt.x = cor.pt.x + (cor.l/2);
-      lt.y = cor.pt.y + (cor.b/2);      
+      lt.x = ((cor.pt.x + (cor.l/2))*kernel_size)+(kernel_size/2);
+      lt.y = ((cor.pt.y + (cor.b/2))*kernel_size)+(kernel_size/2);
       ptrL[k] = lt;
   }
   return corners.size();
 }
-   
 
-int getLightCoordinates(Light* ptr)
+
+/*Function returns number of lights in a given image
+ *Also, supplies a pointer to array containing a structure of lights which contain the co-ordiantes of the lights in the image   
+ *ptr : pointer to light strucutre where information must be rendered 
+ *min_pixels : threshold for minimun number of pixels that can be considered as a light. 
+ */
+int getLightCoordinates(Light* ptr, int min_pixels)
 {
   int const threshold_value = 220;	//value of threshold_value obatined by experimentation
   int const max_binary_value = 255;
@@ -167,9 +176,7 @@ int getLightCoordinates(Light* ptr)
   threshold(image_bw,image_threshold,threshold_value,max_binary_value,THRESH_BINARY); // last parameter to indicate BINARY THRESHOLD operation
   
   Mat img;
-  img = image_threshold.clone();
-  
-  const int kernel_size = 16;
+  img = image_threshold.clone();    
   
   Mat ROI;
   Mat image_new = Mat(img.rows,img.cols,CV_8UC(1),Scalar::all(0));
@@ -187,6 +194,6 @@ int getLightCoordinates(Light* ptr)
     }
   }
   enchanceImage(image_reduced);  
-  int noLights = followBorder(image_reduced,ptr);        
+  int noLights = followBorder(image_reduced,ptr,min_pixels/kernel_size);        
   return noLights;
 }
